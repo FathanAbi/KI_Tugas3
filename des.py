@@ -220,6 +220,22 @@ def cfb_process(text, key, iv, mode="encrypt"):
             previous_cipher_block = xor_block
     return ''.join(processed_blocks)
 
+def ofb_process(text, key, iv, mode="encrypt"):
+    text, round_key = preprocess(text, key, mode)
+
+    blocks = [text[i:i+16] for i in range(0, len(text), 16)]
+    processed_blocks = []
+
+    previous_cipher_block = text_to_bin(iv)
+    
+    for block in blocks:
+        encrypted_iv = des_process(bin_to_hex(previous_cipher_block), round_key, mode="encrypt")
+        xor_block = xor(encrypted_iv, hex_to_bin(block)) 
+        processed_blocks.append(xor_block)
+        previous_cipher_block = encrypted_iv
+    return ''.join(processed_blocks)
+
+
 def preprocess(text, key, mode):
     key = permute(text_to_bin(key), key_permutation_table_pc1 , 56)
     left = key[:28]

@@ -1,57 +1,77 @@
 import socket
 import client_server_utility as csu
-from rsa import decrypt_message
+import time
 import pickle
+from host_list import get_host_id
 from key_management import load_private_key, load_public_key
+from rsa import decrypt_message
+
+client_port, server_port = 1233, 1234
 
 def start_server():
     pu_server = load_public_key("pu_server.pem")
     pr_server = load_private_key("pr_server.pem")
-    """Start the server and listen for incoming connections."""
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = '127.0.0.1'
-    port = 1234
-    server_socket.bind((host, port))
-    server_socket.listen(1)
-    print(f"Server Listening on {host}:{port} ...")
+    pu_pka = load_public_key("pu_pka.pem")
 
-    # receive request connection from client (initiate)
-    client_socket, addr = server_socket.accept()
-    print(f"Got a connection from {addr}")
+    # Start the server to listen for incoming connections
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind(('127.0.0.1', server_port))
+        server_socket.listen(1)
+        print(f"Server listening on 127.0.0.1:{server_port} ...")
 
-    encrypted = client_socket.recv(1024).decode()
+        # Handle initial client connection
+        client_socket, addr = server_socket.accept()
+        with client_socket:
+            print(f"Got a connection from {addr}")
+            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
+            received_dict = pickle.loads(decrypted)
+            print("Received dict:", received_dict)
 
-    print(encrypted)
+            pu_client = csu.get_public_key(get_host_id("client"), int(time.time()), pu_pka)
+            true_n2 = 2000
 
-    decrypted = decrypt_message(encrypted, pr_server)
+            # Respond to client challenge
+            csu.initiate_connection('127.0.0.1', client_port, {"n1": received_dict["n1"], "n2": true_n2}, pu_client)
 
-    received_dict = pickle.loads(decrypted)
+            # Handle further connections
+        client_socket, addr = server_socket.accept()
+        with client_socket:
+            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
+            received_dict = pickle.loads(decrypted)
+            print("Received dict:", received_dict)
 
-    print("recieved dict", received_dict)
-    
+            if received_dict["n2"] != true_n2:
+                print("Error: Invalid n2 received.")
+                return
+            
+        client_socket, addr = server_socket.accept()
+        with client_socket:
+            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
+            received_dict = pickle.loads(decrypted)
+            print("Handshake Step 3 - Received dict:", received_dict)
+            secret_key = received_dict.get("secret_key")
+            if not secret_key or len(secret_key) != 8:
+                print("Error: Invalid secret key received.")
+                return
 
-    # get public key 
-    # client_public_key = getPublicKey(client_id)
+            return secret_key
 
-    # continue intiate connection
-
-
-    # receive DES key
-
-    # connection established
+def server_program(secret_key):
+    """Connect to the server and start exchanging messages."""
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect(('127.0.0.1', client_port))
 
     try:
-        client_socket, addr = server_socket.accept()
-        print(f"Got a connection from {addr}")
-
         while True:
-            csu.handle_from_other_connection(client_socket)
-            csu.handle_to_another_connection(client_socket)
+            csu.handle_to_another_connection(client_socket,secret_key)
+            csu.handle_from_other_connection(client_socket,secret_key)
 
     except KeyboardInterrupt:
-        print("Server shutting down.")
+        print("Client disconnecting.")
     finally:
-        server_socket.close()
+        client_socket.close()
+
+
 
 if __name__ == '__main__':
-    start_server()
+    server_program(start_server())

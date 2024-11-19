@@ -2,92 +2,72 @@ import socket
 import client_server_utility as csu
 import time
 import pickle
-from host_list import hosts, get_host_id
+from host_list import get_host_id
 from key_management import load_private_key, load_public_key
-from cryptography.hazmat.primitives import serialization
-from rsa import verify_with_public_key, encrypt_message
+from rsa import decrypt_message
 
-def getPublicKey(server_id, timestamp, public_key_pka):
-    req = {
-        "server_id" : server_id,
-        "timestamp" : timestamp,
-    }
 
-    data = pickle.dumps(req)
-
-    host = '127.0.0.1'
-    port = 1235
-
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    client_socket.send(data)
-
-    print("sending request to pka...")
-
-    request = client_socket.recv(1024)
-    received_dict = pickle.loads(request)
-    print("Received dictionary:", received_dict)
-
-    public_key = received_dict["public_key"]
-    signature = received_dict["signature"]
-
-    verify_with_public_key(public_key_pka, signature, public_key)
-
-    client_socket.close()
-
-    public_key = serialization.load_pem_public_key(public_key)
-
-    return public_key
-
-def initateConnection(public_key_server):
-    """Connect to the server and start exchanging messages."""
-    host = '127.0.0.1'
-    port = 1234
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    req = {
-        "id" : 1,
-        "n1" : 1000,
-    }
-
-    serialized_data = pickle.dumps(req)
-    encrypted_data = encrypt_message(serialized_data, public_key_server)
-
-    client_socket.send(encrypted_data.encode())
-
-    print("sending request to server...")
-
-    client_socket.close()
-
+server_id, client_port, server_port = get_host_id("server"), 1233, 1234
 
 def client_program():
     pu_client = load_public_key("pu_client.pem")
     pr_client = load_private_key("pr_client.pem")
     pu_pka = load_public_key("pu_pka.pem")
-    # get public key server from pka
-    current_unix_timestamp = int(time.time())
-    pu_server = getPublicKey(get_host_id("server"), current_unix_timestamp, pu_pka)
+    
 
-    # initiate connection
-    initateConnection(pu_server)
+    # Start the server to listen for incoming connections
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind(('127.0.0.1', client_port))
+        server_socket.listen(1)
+        print(f"Client listening on 127.0.0.1:{client_port} ...")
 
-    return
-    # send DES key
-    # sendDESKey()
+        # Get server's public key from PKA
+        pu_server = csu.get_public_key(server_id, int(time.time()), pu_pka)
+        true_n1 = 1000
 
-    # connection established
+        # Initiate first connection
+        csu.initiate_connection('127.0.0.1', server_port, {"id": 1, "n1": true_n1}, pu_server)
+
+        # Handle response from server
+        client_socket, addr = server_socket.accept()
+        with client_socket:
+            print(f"Got a connection from {addr}")
+            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_client)
+            received_dict = pickle.loads(decrypted)
+            print("Received dict:", received_dict)
+
+            if received_dict["n1"] != true_n1:
+                return
+
+            # Respond to server challenge
+            csu.initiate_connection('127.0.0.1', server_port, {"n2": received_dict["n2"]}, pu_server)
+
+            # Send secret key
+            secret_key = ""
+            while len(secret_key) != 8:
+                secret_key = input("> Enter secret key (8 characters): ")
+            csu.initiate_connection('127.0.0.1', server_port, {"secret_key": secret_key}, pu_server)
+            return secret_key
+
+def start_client(secret_key):
+    """Start the server and listen for incoming connections."""
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('127.0.0.1', client_port))
+    server_socket.listen(1)
+    print(f"Client listening on 127.0.0.1:{client_port} ...")
 
     try:
+        client_socket, addr = server_socket.accept()
+        print(f"Got a connection from {addr}")
+
         while True:
-            csu.handle_to_another_connection(client_socket)
-            csu.handle_from_other_connection(client_socket)
+            csu.handle_from_other_connection(client_socket, secret_key)
+            csu.handle_to_another_connection(client_socket, secret_key)
 
     except KeyboardInterrupt:
-        print("Client disconnecting.")
+        print("Server shutting down.")
     finally:
-        client_socket.close()
+        server_socket.close()
 
 if __name__ == '__main__':
-    client_program()
+    start_client(client_program())
