@@ -27,11 +27,16 @@ def start_server():
             received_dict = pickle.loads(decrypted)
             print("Received dict:", received_dict)
 
+            # request public key client (step 4)
+            print("sending request for public key client...")
             pu_client = csu.get_public_key(get_host_id("client"), int(time.time()), pu_pka)
+            
             true_n2 = 2000
 
-            # Respond to client challenge
+            # Respond to client challenge (step 6)
+            print("send respond back to client....")
             csu.initiate_connection('127.0.0.1', client_port, {"n1": received_dict["n1"], "n2": true_n2}, pu_client)
+            
 
             # Handle further connections
         client_socket, addr = server_socket.accept()
@@ -44,6 +49,8 @@ def start_server():
                 print("Error: Invalid n2 received.")
                 return
             
+            print("n2 valid. conection established")
+            
         client_socket, addr = server_socket.accept()
         with client_socket:
             decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
@@ -53,7 +60,7 @@ def start_server():
             if not secret_key or len(secret_key) != 8:
                 print("Error: Invalid secret key received.")
                 return
-
+            print("secret key received successfully. ready to receive message")
             return secret_key
 
 def server_program(secret_key):

@@ -21,12 +21,16 @@ def client_program():
         server_socket.listen(1)
         print(f"Client listening on 127.0.0.1:{client_port} ...")
 
-        # Get server's public key from PKA
+        # Get server's public key from PKA (step 1)
+        print('sending request for public key server...')
         pu_server = csu.get_public_key(server_id, int(time.time()), pu_pka)
+        
         true_n1 = 1000
 
-        # Initiate first connection
+        # Initiate first connection (step 3)
+        print("sending request to server...")
         csu.initiate_connection('127.0.0.1', server_port, {"id": 1, "n1": true_n1}, pu_server)
+        
 
         # Handle response from server
         client_socket, addr = server_socket.accept()
@@ -38,15 +42,19 @@ def client_program():
 
             if received_dict["n1"] != true_n1:
                 return
+            
+            print("n1 valid")
 
-            # Respond to server challenge
+            # Respond to server challenge (step 7)
             csu.initiate_connection('127.0.0.1', server_port, {"n2": received_dict["n2"]}, pu_server)
+            print("send request again to server...")
 
             # Send secret key
             secret_key = ""
             while len(secret_key) != 8:
                 secret_key = input("> Enter secret key (8 characters): ")
             csu.initiate_connection('127.0.0.1', server_port, {"secret_key": secret_key}, pu_server)
+            print("sending secret key to server...")
             return secret_key
 
 def start_client(secret_key):

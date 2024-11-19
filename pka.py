@@ -51,9 +51,9 @@ def start_server():
 
             data = pickle.dumps(res)
 
-
+            # send public key server and client (step 2 and 5)
             client_socket.send(data)
-            print("sending public key...")
+            print(f'sending public key id {id}....')
 
             client_socket.close()
 
