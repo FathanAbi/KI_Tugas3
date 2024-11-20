@@ -12,3 +12,6 @@ Buat program awal (server.py dan client.py)
 * Implementasi PKA sampai step 3
 
 ### Fihriz Ilham Rabbany
+* Implementasi PKA sampai selesai
+* Refactoring hubungan client server
+* Implementasi Output Feedback (OFB) pada DES
