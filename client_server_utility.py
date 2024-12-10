@@ -1,7 +1,7 @@
 import des
 import socket
 import pickle
-from rsa import verify_with_public_key, encrypt_message
+from rsa import encrypt, decrypt
 from cryptography.hazmat.primitives import serialization
 # padding dan unpadding mengguankan PKCS7
 def pad(string, block_size):
@@ -131,14 +131,17 @@ def get_public_key(client_id, timestamp, public_key_pka):
     """Fetch a public key from the Public Key Authority (PKA)."""
     response = send_request('127.0.0.1', 1235, {"server_id": client_id, "timestamp": timestamp})
     print("Received dictionary:", response)
-    public_key, signature = response["public_key"], response["signature"]
-    verify_with_public_key(public_key_pka, signature, public_key)
-    return serialization.load_pem_public_key(public_key)
+    public_key, timestamp = response["public_key"], response["timestamp"]
+    decrypted = decrypt(public_key, public_key_pka)
+    # verify_with_public_key(public_key_pka, signature, public_key)
+    public_key = tuple(map(int, decrypted.split(',')))
+    print(f"get public key {public_key}")
+    return public_key
 
 
 def initiate_connection(host, port, req, public_key):
     """Establish a connection and send an encrypted request."""
-    encrypted_data = encrypt_message(pickle.dumps(req), public_key)
+    encrypted_data = encrypt(pickle.dumps(req), public_key)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((host, port))
         client_socket.send(encrypted_data.encode())

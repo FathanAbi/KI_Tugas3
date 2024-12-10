@@ -4,14 +4,14 @@ import time
 import pickle
 from host_list import get_host_id
 from key_management import load_private_key, load_public_key
-from rsa import decrypt_message
+from rsa import encrypt, decrypt
 
 client_port, server_port = 1233, 1234
 
 def start_server():
-    pu_server = load_public_key("pu_server.pem")
-    pr_server = load_private_key("pr_server.pem")
-    pu_pka = load_public_key("pu_pka.pem")
+    pu_server = (5, 7663)
+    pr_server = (4493, 7663)
+    pu_pka = (5, 5293)
 
     # Start the server to listen for incoming connections
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
@@ -23,7 +23,7 @@ def start_server():
         client_socket, addr = server_socket.accept()
         with client_socket:
             print(f"Got a connection from {addr}")
-            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
+            decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
             received_dict = pickle.loads(decrypted)
             print("Received dict:", received_dict)
 
@@ -41,7 +41,7 @@ def start_server():
             # Handle further connections
         client_socket, addr = server_socket.accept()
         with client_socket:
-            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
+            decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
             received_dict = pickle.loads(decrypted)
             print("Received dict:", received_dict)
 
@@ -53,7 +53,7 @@ def start_server():
             
         client_socket, addr = server_socket.accept()
         with client_socket:
-            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_server)
+            decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
             received_dict = pickle.loads(decrypted)
             print("Handshake Step 3 - Received dict:", received_dict)
             secret_key = received_dict.get("secret_key")

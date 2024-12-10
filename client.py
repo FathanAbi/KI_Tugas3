@@ -3,16 +3,15 @@ import client_server_utility as csu
 import time
 import pickle
 from host_list import get_host_id
-from key_management import load_private_key, load_public_key
-from rsa import decrypt_message
+from rsa import encrypt, decrypt
 
 
 server_id, client_port, server_port = get_host_id("server"), 1233, 1234
 
 def client_program():
-    pu_client = load_public_key("pu_client.pem")
-    pr_client = load_private_key("pr_client.pem")
-    pu_pka = load_public_key("pu_pka.pem")
+    pu_client = (5, 8633)
+    pr_client = (5069, 8633)
+    pu_pka = (5, 5293)
     
 
     # Start the server to listen for incoming connections
@@ -36,7 +35,7 @@ def client_program():
         client_socket, addr = server_socket.accept()
         with client_socket:
             print(f"Got a connection from {addr}")
-            decrypted = decrypt_message(client_socket.recv(1024).decode(), pr_client)
+            decrypted = decrypt(client_socket.recv(1024).decode(), pr_client)
             received_dict = pickle.loads(decrypted)
             print("Received dict:", received_dict)
 

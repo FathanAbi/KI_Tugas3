@@ -1,107 +1,71 @@
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
-import base64
+def encrypt(message, public_key):
+    e, n = public_key
+    ciphertext = [(pow(ord(char), e, n)) for char in message]
+    ciphertext_string = ','.join(map(str, ciphertext))
 
-# Encrypt the message using the public key
-# def encrypt_message(message, public_key):
-#     ciphertext = public_key.encrypt(
-#         message.encode(),
-#         padding.OAEP(
-#             mgf=padding.MGF1(algorithm=hashes.SHA256()),
-#             algorithm=hashes.SHA256(),
-#             label=None
-#         )
-#     )
-#     return base64.b64encode(ciphertext).decode()
-# Function to encrypt data with a public key
-def sign_with_private_key(private_key, data):
-    signature = private_key.sign(
-        data,  # Data to encrypt (must be bytes)
-        padding.PSS(  # RSA padding scheme
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
-        hashes.SHA256()  # Hashing algorithm used in PSS
-    )
-    return signature
+    return ciphertext_string
 
-# Function to decrypt the encrypted server public key using PKA's public key
-def verify_with_public_key(public_key, signature, data):
-    try:
-        # Verify the signature using the public key
-        public_key.verify(
-            signature,  # The signature to verify
-            data,       # The original data that was signed (must be bytes)
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
-            ),
-            hashes.SHA256()  # Hashing algorithm used in PSS
-        )
-        print("Signature is valid.")
-    except Exception as e:
-        print("Signature verification failed:", str(e))
+# Function to decrypt a message
+def decrypt(ciphertext, private_key):
+    d, n = private_key
+    ciphertext_list = list(map(int, ciphertext.split(',')))
+    message = ''.join([chr(pow(char, d, n)) for char in ciphertext_list])
 
-# Encrypt the message using the public key
-def encrypt_message(message, public_key):
-    ciphertext = public_key.encrypt(
-        message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return base64.b64encode(ciphertext).decode()
-
-# Decrypt the message using the private key
-def decrypt_message(ciphertext, private_key):
-    ciphertext = base64.b64decode(ciphertext)
-    plaintext = private_key.decrypt(
-        ciphertext,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return plaintext
+    return message
 
 
+if __name__ == '__main__':
+    public_key_to_be_encrypted = (5, 8633)
+    public_key_to_be_encrypted_as_string = f"{public_key_to_be_encrypted[0]},{public_key_to_be_encrypted[1]}"
+    message = public_key_to_be_encrypted_as_string
 
-# Load the private key from a file
-def load_private_key(file_path, password=None):
-    with open(file_path, "rb") as key_file:
-        private_key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=password.encode() if password else None
-        )
-    return private_key
+    print(message)
 
-# Load the public key from a file
-def load_public_key(file_path):
-    with open(file_path, "rb") as key_file:
-        public_key = serialization.load_pem_public_key(key_file.read())
-    return public_key
+    public_key = (5, 5293)
+    encrypted = encrypt(message, public_key)
+    print(encrypted)
 
-if __name__ == "__main__":
-    public_key_server = load_public_key("pu_server.pem")
-    private_key_pka = load_private_key("pr_pka.pem")
-    public_key_pka = load_public_key("pu_pka.pem")
+    encrypted = encrypted.encode()
+    print(encrypted)
 
-    public_key_server_bytes = public_key_server.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
+    private_key = (3089, 5293)
+    encrypted = encrypted.decode()
+    decrypted = decrypt(encrypted, private_key)
+    print(decrypted)
 
-    # Step 3: Encrypt a message
-    message = "Hello, this is a secret message!aaaa"
-    signature = sign_with_private_key(private_key_pka, public_key_server_bytes)
-    print(f"signature: {signature}")
+    public_key_restored = tuple(map(int, decrypted.split(',')))
+    print("Restored Public Key as Tuple:", public_key_restored)
 
-    # Step 4: Decrypt the message
-    verfiy_server_public_key = verify_with_public_key(public_key_pka, signature, public_key_server_bytes)
+    # ## test
+    message = "HELLLOOO"
+    encrypted2 = encrypt(message, public_key_restored)
+    print(encrypted2)
 
-    
+    encrypted2 = encrypted2.encode()
+    print(encrypted2)
+
+
+    private_key = (5069, 8633)
+    encrypted2 = encrypted2.decode()
+    decrypted2 = decrypt(encrypted2, private_key)
+
+    print(decrypted2)
+
+    # ## reverse
+    message1 = "encrypt using private_key"
+
+    public_key = (5, 7663)
+    private_key = (4493, 7663)
+
+    encrypted3 = encrypt(message1, private_key)
+    print(encrypted3)
+   
+    encrypted3 = encrypted3.encode()
+    print(encrypted3)
+
+
+    received_ecnrypted = encrypted3.decode()
+    print(received_ecnrypted)
+
+    decrypted3 = decrypt(received_ecnrypted, public_key)
+    print(decrypted3)

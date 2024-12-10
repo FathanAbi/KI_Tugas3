@@ -1,16 +1,14 @@
 import socket
 import pickle
 import time
-from key_management import load_private_key, load_public_key
 import client_server_utility as csu
-from cryptography.hazmat.primitives import serialization
-from rsa import sign_with_private_key
+from rsa import encrypt
 
 def start_server():
-    pu_pka = load_public_key("pu_pka.pem")
-    pr_pka = load_private_key("pr_pka.pem")
-    pu_client = load_public_key("pu_client.pem")
-    pu_server = load_public_key("pu_server.pem")
+    pu_pka = (5, 5293),
+    pr_pka = (3089, 5293)
+    pu_client = (5, 8633)
+    pu_server = (5, 7663)
 
     public_keys = {
         1 : pu_client,
@@ -36,16 +34,20 @@ def start_server():
             id = received_dict["server_id"]
             public_key = public_keys[id]
 
-            public_key_server_bytes = public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
+            public_key_to_be_encrypted_as_string = f"{public_key[0]},{public_key[1]}"
+            message = public_key_to_be_encrypted_as_string
 
-            signature = sign_with_private_key(pr_pka, public_key_server_bytes)
+            encrypted = encrypt(message, pr_pka)
+
+            # public_key_server_bytes = public_key.public_bytes(
+            #     encoding=serialization.Encoding.PEM,
+            #     format=serialization.PublicFormat.SubjectPublicKeyInfo
+            # )
+
+            # signature = sign_with_private_key(pr_pka, public_key_server_bytes)
 
             res = {
-                "public_key" : public_key_server_bytes,
-                "signature" : signature,
+                "public_key" : encrypted,
                 "timestamp" : int(time.time()),
             }
 
