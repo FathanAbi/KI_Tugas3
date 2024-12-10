@@ -1,7 +1,6 @@
 import socket
 import client_server_utility as csu
 import time
-import pickle
 from host_list import get_host_id
 from rsa import encrypt, decrypt
 import ast

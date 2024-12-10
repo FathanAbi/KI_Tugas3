@@ -1,7 +1,6 @@
 import socket
 import pickle
 import time
-import client_server_utility as csu
 from rsa import encrypt
 
 def start_server():
