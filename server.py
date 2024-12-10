@@ -52,18 +52,21 @@ def start_server():
             
         client_socket, addr = server_socket.accept()
         with client_socket:
-            decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
+            decrypted_message = decrypt(client_socket.recv(1024).decode(), pr_server)
+            decrypted = decrypt(decrypted_message, pu_client)
             received_dict = ast.literal_eval(decrypted)
             print("Handshake Step 3 - Received dict:", received_dict)
             secret_key = received_dict.get("secret_key")
             if not secret_key or len(secret_key) != 8:
                 print("Error: Invalid secret key received.")
                 return
-            print("secret key received successfully. ready to receive message")
+            print(f"secret key {secret_key} received successfully. ready to receive message")
             return secret_key
 
 def server_program(secret_key):
     """Connect to the server and start exchanging messages."""
+    if secret_key == None:
+        return
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(('127.0.0.1', client_port))
 

@@ -52,12 +52,16 @@ def client_program():
             secret_key = ""
             while len(secret_key) != 8:
                 secret_key = input("> Enter secret key (8 characters): ")
-            csu.initiate_connection('127.0.0.1', server_port, {"secret_key": secret_key}, pu_server)
+            
+            secret_key_message = encrypt(f"{{'secret_key': '{secret_key}'}}", pr_client)
+            csu.initiate_connection('127.0.0.1', server_port, secret_key_message, pu_server)
             print("sending secret key to server...")
             return secret_key
 
 def start_client(secret_key):
     """Start the server and listen for incoming connections."""
+    if secret_key == None:
+        return
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('127.0.0.1', client_port))
     server_socket.listen(1)
