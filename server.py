@@ -5,6 +5,7 @@ import pickle
 from host_list import get_host_id
 from key_management import load_private_key, load_public_key
 from rsa import encrypt, decrypt
+import ast
 
 client_port, server_port = 1233, 1234
 
@@ -24,7 +25,7 @@ def start_server():
         with client_socket:
             print(f"Got a connection from {addr}")
             decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
-            received_dict = pickle.loads(decrypted)
+            received_dict = ast.literal_eval(decrypted)
             print("Received dict:", received_dict)
 
             # request public key client (step 4)
@@ -42,7 +43,7 @@ def start_server():
         client_socket, addr = server_socket.accept()
         with client_socket:
             decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
-            received_dict = pickle.loads(decrypted)
+            received_dict = ast.literal_eval(decrypted)
             print("Received dict:", received_dict)
 
             if received_dict["n2"] != true_n2:
@@ -54,7 +55,7 @@ def start_server():
         client_socket, addr = server_socket.accept()
         with client_socket:
             decrypted = decrypt(client_socket.recv(1024).decode(), pr_server)
-            received_dict = pickle.loads(decrypted)
+            received_dict = ast.literal_eval(decrypted)
             print("Handshake Step 3 - Received dict:", received_dict)
             secret_key = received_dict.get("secret_key")
             if not secret_key or len(secret_key) != 8:

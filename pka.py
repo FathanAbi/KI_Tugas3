@@ -34,10 +34,9 @@ def start_server():
             id = received_dict["server_id"]
             public_key = public_keys[id]
 
-            public_key_to_be_encrypted_as_string = f"{public_key[0]},{public_key[1]}"
-            message = public_key_to_be_encrypted_as_string
+            # public_key = f"{public_key[0]},{public_key[1]}"
 
-            encrypted = encrypt(message, pr_pka)
+            # encrypted = encrypt(message, pr_pka)
 
             # public_key_server_bytes = public_key.public_bytes(
             #     encoding=serialization.Encoding.PEM,
@@ -47,14 +46,16 @@ def start_server():
             # signature = sign_with_private_key(pr_pka, public_key_server_bytes)
 
             res = {
-                "public_key" : encrypted,
+                "public_key" : public_key,
                 "timestamp" : int(time.time()),
             }
 
-            data = pickle.dumps(res)
+            res = str(res)
+
+            encrypted = encrypt(res, pr_pka)
 
             # send public key server and client (step 2 and 5)
-            client_socket.send(data)
+            client_socket.send(encrypted.encode())
             print(f'sending public key id {id}....')
 
             client_socket.close()

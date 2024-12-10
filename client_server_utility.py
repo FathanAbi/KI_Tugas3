@@ -2,7 +2,8 @@ import des
 import socket
 import pickle
 from rsa import encrypt, decrypt
-from cryptography.hazmat.primitives import serialization
+import ast
+
 # padding dan unpadding mengguankan PKCS7
 def pad(string, block_size):
   padding_number = block_size - len(string) % block_size
@@ -123,25 +124,29 @@ def send_request(host, port, data):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((host, port))
         client_socket.send(pickle.dumps(data))
-        response = client_socket.recv(1024)
-        return pickle.loads(response)
+        response = client_socket.recv(1024).decode()
+        return response
 
 
 def get_public_key(client_id, timestamp, public_key_pka):
     """Fetch a public key from the Public Key Authority (PKA)."""
     response = send_request('127.0.0.1', 1235, {"server_id": client_id, "timestamp": timestamp})
-    print("Received dictionary:", response)
+    print("Received response:", response)
+
+    decrypted = decrypt(response, public_key_pka)
+    print(f"decrypted response: {decrypted}")
+
+    response = ast.literal_eval(decrypted)
     public_key, timestamp = response["public_key"], response["timestamp"]
-    decrypted = decrypt(public_key, public_key_pka)
-    # verify_with_public_key(public_key_pka, signature, public_key)
-    public_key = tuple(map(int, decrypted.split(',')))
+    
     print(f"get public key {public_key}")
     return public_key
 
 
 def initiate_connection(host, port, req, public_key):
     """Establish a connection and send an encrypted request."""
-    encrypted_data = encrypt(pickle.dumps(req), public_key)
+    req = str(req)
+    encrypted_data = encrypt(req, public_key)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((host, port))
         client_socket.send(encrypted_data.encode())

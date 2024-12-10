@@ -4,6 +4,7 @@ import time
 import pickle
 from host_list import get_host_id
 from rsa import encrypt, decrypt
+import ast
 
 
 server_id, client_port, server_port = get_host_id("server"), 1233, 1234
@@ -36,7 +37,7 @@ def client_program():
         with client_socket:
             print(f"Got a connection from {addr}")
             decrypted = decrypt(client_socket.recv(1024).decode(), pr_client)
-            received_dict = pickle.loads(decrypted)
+            received_dict = ast.literal_eval(decrypted)
             print("Received dict:", received_dict)
 
             if received_dict["n1"] != true_n1:
